@@ -1,0 +1,8 @@
+{
+  "properties": [
+    {
+      "name": "audit.message.batch-size",
+      "type": "java.lang.String",
+      "description": "Description for audit.message.batch-size."
+    }
+  ] }

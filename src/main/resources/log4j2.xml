@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="INFO">
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n" />
+        </Console>
+        <File name="MyFile" fileName="all.log" immediateFlush="false" append="false">
+            <PatternLayout pattern="%d{yyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </File>
+        <!--<JDBC name="MySQLDatabase" tableName="LOGS">-->
+            <!--<ConnectionFactory-->
+                    <!--class="com.messagingservice.LoggerConnectionFactory" method="getConnection" />-->
+            <!--&lt;!&ndash;<Column name="LOG_ID" pattern="%u" isUnicode="false" />&ndash;&gt;-->
+            <!--<Column name="ENTRY_DATE" isEventTimestamp="true" isUnicode="false"/>-->
+            <!--<Column name="LOGGER" pattern="%logger" isUnicode="false"/>-->
+            <!--<Column name="LOG_LEVEL" pattern="%level" isUnicode="false"/>-->
+            <!--<Column name="MESSAGE" pattern="%m" isUnicode="false"/>-->
+            <!--<Column name="EXCEPTION" pattern="%throwable " isUnicode="false"/>-->
+        <!--</JDBC>-->
+    </Appenders>
+    <Loggers>
+        <Root level="debug">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="MyFile"/>
+        </Root>
+    </Loggers>
+</Configuration>
