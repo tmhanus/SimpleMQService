@@ -65,7 +65,7 @@ class RabbitMessageAuditListener (auditQueue: String, var brokerConnection: Rabb
                     logger.error("Message Audit Consumer ${brokerConnection.broker.name} was shut down - " + consumerTag)
                 }
 
-                messageAuditConnectionClosedListener.messageAuditConnectionClosedListener()
+                messageAuditConnectionClosedListener.messageAuditConnectionClosed()
             }
         }
     }

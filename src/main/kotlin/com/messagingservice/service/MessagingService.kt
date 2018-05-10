@@ -23,7 +23,7 @@ import java.util.*
  */
 
 interface IMessagingService {
-    fun createTopic(name: String)
+    fun createTopic(body: String)
 
     fun listTopics(): List<Topic>
 
@@ -37,7 +37,7 @@ interface IMessagingService {
 
     fun readFromTopic(topicName: String): String
 
-    fun createQueue(name: String)
+    fun createQueue(body: String)
 
     fun deleteQueue(queueName: String, forceDelete: Boolean)
 
@@ -65,6 +65,7 @@ class MessagingService(private val mqProvider: IMqProvider,
                        var passwordEncoder: PasswordEncoder)
     : IMessagingService {
 
+    // DEFAULT SERVICE SETTINGS
     private var retentionHours: Int = UNLIMITED_RETENTION
     private var replicationLevel: Int = NO_REPLICATION
 
@@ -88,7 +89,6 @@ class MessagingService(private val mqProvider: IMqProvider,
 
     // AUDIT
     private var messageAuditBatchSize: Int = DEFAULT_MESSAGE_AUDIT_BATCH_SIZE
-
 
     init {
         setupMqPolicies()
@@ -157,7 +157,7 @@ class MessagingService(private val mqProvider: IMqProvider,
     }
 
     @PreAuthorize("hasAnyRole('admin', 'user')")
-    @PostMapping("/topics/{topicName}/")
+    @PostMapping("/topics/{topicName}/purge/")
     override fun purgeTopic(@PathVariable topicName: String) {
         setupBrokersForRequest()
         mqProvider.purgeTopic(topicName)
@@ -184,7 +184,13 @@ class MessagingService(private val mqProvider: IMqProvider,
 
     @PreAuthorize("hasAnyRole('admin', 'user')")
     @PutMapping("/topics")
-    override fun createTopic(@RequestParam("name") name: String) {
+    override fun createTopic(@RequestBody body: String) {
+        if (body.isEmpty()) {
+            throw IllegalArgumentException("Body is missing in the request.")
+        }
+
+        val name = getRequiredFieldValue("name", Gson().fromJson(body, JsonObject::class.java))
+
         setupBrokersForRequest()
         mqProvider.createTopic(name)
 
@@ -193,7 +199,13 @@ class MessagingService(private val mqProvider: IMqProvider,
 
     @PreAuthorize("hasAnyRole('admin', 'user')")
     @PutMapping("/queues")
-    override fun createQueue(name: String) {
+    override fun createQueue(@RequestBody body: String) {
+        if (body.isEmpty()) {
+            throw IllegalArgumentException("Body is missing in the request.")
+        }
+
+        val name = getRequiredFieldValue("name", Gson().fromJson(body, JsonObject::class.java))
+
         if (name == MESSAGE_AUDIT_QUEUE) {
             throw BadRequest("Queue name $name is reserved name and you can't use it.")
         }
@@ -232,10 +244,8 @@ class MessagingService(private val mqProvider: IMqProvider,
         if (body.isEmpty()) {
             throw IllegalArgumentException("Body is missing in the request.")
         }
-        val jsonObject = Gson().fromJson(body, JsonObject::class.java)
 
-        val messageContent = jsonObject?.get("message")?.asString
-                ?: throw IllegalArgumentException("Message is a required body argument.")
+        val messageContent = getRequiredFieldValue("message", Gson().fromJson(body, JsonObject::class.java))
 
         if (!checkUploadLimit(messageContent)) {
             throw LimitExceeded("You exceeded your daily upload limit. If you want to proceed, please contact your administrator")
@@ -307,9 +317,12 @@ class MessagingService(private val mqProvider: IMqProvider,
 
     @PreAuthorize("hasAnyRole('admin')")
     @PutMapping("/users/")
-    fun createUser(@RequestParam("username") userName: String,
-                   @RequestParam("password") password: String,
-                   @RequestParam("role") role: String) {
+    fun createUser(@RequestBody body: String) {
+        val jsonObject = Gson().fromJson(body, JsonObject::class.java)
+
+        val userName = getRequiredFieldValue("username", jsonObject)
+        val password = getRequiredFieldValue("password", jsonObject)
+        val role = getRequiredFieldValue("role", jsonObject)
 
         val existingRoles = rolesRepository.findAll()
 
@@ -339,9 +352,14 @@ class MessagingService(private val mqProvider: IMqProvider,
     @PreAuthorize("hasAnyRole('admin')")
     @PostMapping("/users/{username}/")
     fun updateUser(@PathVariable("username") userName: String,
-                   @RequestParam("password", required = false) password: String?,
-                   @RequestParam("role") role: String,
-                   @RequestParam("active") active: Int) {
+                   @RequestBody body: String) {
+
+        val jsonObject = Gson().fromJson(body, JsonObject::class.java)
+
+        val password = getOptionalFieldValue("password", jsonObject)
+        val role = getRequiredFieldValue("role", jsonObject)
+        val active = getRequiredFieldValue("active", jsonObject).toIntOrNull() ?:
+                throw BadRequest("Field active is supposed be 0 or 1.")
 
         val user = userRepository.findByLogin(userName)
                 ?: throw ResourceNotFound("Specified user does not exist.")
@@ -507,6 +525,15 @@ class MessagingService(private val mqProvider: IMqProvider,
     private fun getAuthenticatedUser(): AuthUserDetails {
         val authentication = SecurityContextHolder.getContext().authentication
         return authentication.principal as AuthUserDetails
+    }
+
+    private fun getRequiredFieldValue(fieldName: String, jsonObject: JsonObject?): String {
+        return  jsonObject?.get(fieldName)?.asString
+                ?: throw IllegalArgumentException("$fieldName is a required body argument.")
+    }
+
+    private fun getOptionalFieldValue(fieldName: String, jsonObject: JsonObject?): String? {
+        return  jsonObject?.get(fieldName)?.asString
     }
 
     companion object {

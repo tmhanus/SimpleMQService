@@ -333,7 +333,7 @@ class RabbitMqProvider(
         this.messageAuditListener.listenForAuditEvents(messageAuditLogger)
     }
 
-    override fun messageAuditConnectionClosedListener() {
+    override fun messageAuditConnectionClosed() {
         activeBroker = getAvailableBrokerConnection()
 
         this.messageAuditListener.reconnectToBroker(activeBroker)

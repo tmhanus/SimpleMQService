@@ -89,9 +89,9 @@ dependencies {
 	// https://mvnrepository.com/artifact/org.springframework.security/spring-security-web
 	compile group: 'org.springframework.security', name: 'spring-security-web', version: '5.0.3.RELEASE'
 
-	compile group: 'org.hibernate', name: 'hibernate-core', version: '5.2.14.Final'
+//	compile group: 'org.hibernate', name: 'hibernate-core', version: '5.2.14.Final'
 	// https://mvnrepository.com/artifact/org.hibernate/hibernate-entitymanager
-	compile group: 'org.hibernate', name: 'hibernate-entitymanager', version: '5.2.14.Final'
+//	compile group: 'org.hibernate', name: 'hibernate-entitymanager', version: '5.2.14.Final'
 
 	testCompile('org.springframework.boot:spring-boot-starter-test')
 

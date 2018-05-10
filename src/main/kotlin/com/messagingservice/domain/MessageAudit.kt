@@ -15,7 +15,7 @@ data class MessageAudit (
 
         var user: String,
 
-        @Temporal(TemporalType.DATE)
+        @Temporal(TemporalType.TIMESTAMP)
         var timestamp: Date,
 
         @Column(name = "destination_type")

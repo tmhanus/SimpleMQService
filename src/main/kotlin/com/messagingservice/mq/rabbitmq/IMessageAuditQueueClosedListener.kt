@@ -5,5 +5,5 @@ package com.messagingservice.mq.rabbitmq
  */
 
 interface IMessageAuditConnectionClosedListener {
-    fun messageAuditConnectionClosedListener()
+    fun messageAuditConnectionClosed()
 }
