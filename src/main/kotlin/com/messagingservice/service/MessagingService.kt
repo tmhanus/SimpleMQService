@@ -150,14 +150,14 @@ class MessagingService(private val mqProvider: IMqProvider,
     }
 
     @PreAuthorize("hasAnyRole('admin', 'user')")
-    @DeleteMapping("/topics/{topicName}/")
+    @DeleteMapping("/topics/{topicName}")
     override fun deleteTopic(@PathVariable topicName: String, @RequestParam(value = "forceDelete", defaultValue = "0") forceDelete: Boolean) {
         setupBrokersForRequest()
         mqProvider.deleteTopic(topicName, forceDelete)
     }
 
     @PreAuthorize("hasAnyRole('admin', 'user')")
-    @PostMapping("/topics/{topicName}/purge/")
+    @PostMapping("/topics/{topicName}/purge")
     override fun purgeTopic(@PathVariable topicName: String) {
         setupBrokersForRequest()
         mqProvider.purgeTopic(topicName)
@@ -221,15 +221,24 @@ class MessagingService(private val mqProvider: IMqProvider,
     }
 
     @PreAuthorize("hasAnyRole('admin', 'user')")
-    @DeleteMapping("/queues/{queueName}/")
+    @DeleteMapping("/queues/{queueName}")
     override fun deleteQueue(@PathVariable queueName: String, @RequestParam(value = "forceDelete", defaultValue = "0") forceDelete: Boolean) {
+
+        if (queueName == MESSAGE_AUDIT_QUEUE) {
+            throw BadRequest("Queue name $queueName is reserved name and you can't delete it.")
+        }
+
         setupBrokersForRequest()
         mqProvider.deleteQueue(queueName, forceDelete)
     }
 
     @PreAuthorize("hasAnyRole('admin', 'user')")
-    @PostMapping("/queues/{queueName}/purge/")
+    @PostMapping("/queues/{queueName}/purge")
     override fun purgeQueue(@PathVariable queueName: String) {
+        if (queueName == MESSAGE_AUDIT_QUEUE) {
+            throw BadRequest("Queue name $queueName is reserved name and you can't purge it.")
+        }
+
         setupBrokersForRequest()
         mqProvider.purgeQueue(queueName)
     }
@@ -257,7 +266,7 @@ class MessagingService(private val mqProvider: IMqProvider,
     }
 
     @PreAuthorize("hasAnyRole('admin', 'user')")
-    @GetMapping("/queues/{queueName}/receive/")
+    @GetMapping("/queues/{queueName}/receive")
     override fun readFromQueue(@PathVariable queueName: String): String {
         if (queueName == MESSAGE_AUDIT_QUEUE) {
             throw BadRequest("Queue name $queueName is a system queue and you can't read from it.")
@@ -280,7 +289,7 @@ class MessagingService(private val mqProvider: IMqProvider,
     }
 
     @PreAuthorize("hasAnyRole('admin', 'user')")
-    @PostMapping("/stats/")
+    @PostMapping("/stats")
     override fun getStatistics(@RequestParam("user", required = false) userName: String?,
                                @RequestParam("from", required = false) @DateTimeFormat(pattern="yyyy-MM-dd hh:mm:ss") from: Date?,
                                @RequestParam("to", required = false) @DateTimeFormat(pattern="yyyy-MM-dd hh:mm:ss") to: Date?,
@@ -316,7 +325,7 @@ class MessagingService(private val mqProvider: IMqProvider,
     }
 
     @PreAuthorize("hasAnyRole('admin')")
-    @PutMapping("/users/")
+    @PutMapping("/users")
     fun createUser(@RequestBody body: String) {
         val jsonObject = Gson().fromJson(body, JsonObject::class.java)
 
@@ -340,7 +349,7 @@ class MessagingService(private val mqProvider: IMqProvider,
     }
 
     @PreAuthorize("hasAnyRole('admin')")
-    @GetMapping("/users/")
+    @GetMapping("/users")
     fun listUsers(): List<UserDto> {
         val users = mutableListOf<UserDto>()
 
@@ -350,7 +359,7 @@ class MessagingService(private val mqProvider: IMqProvider,
     }
 
     @PreAuthorize("hasAnyRole('admin')")
-    @PostMapping("/users/{username}/")
+    @PostMapping("/users/{username}")
     fun updateUser(@PathVariable("username") userName: String,
                    @RequestBody body: String) {
 
@@ -385,7 +394,7 @@ class MessagingService(private val mqProvider: IMqProvider,
     }
 
     @PreAuthorize("hasAnyRole('admin')")
-    @DeleteMapping("/users/{username}/")
+    @DeleteMapping("/users/{username}")
     fun deleteUser(@PathVariable("username") userName: String) {
         if (getAuthenticatedUser().login == userName) {
             throw BadRequest("You can't delete yourself.")
@@ -554,7 +563,7 @@ class MessagingService(private val mqProvider: IMqProvider,
         private const val DEFAULT_SUFFICIENT_BROKERS_NUMBER_TEST_INTERVAL = 30000
         private const val DEFAULT_DATA_TRANSFERRED_REFRESH_INTERVAL = 60000
 
-        const val MESSAGE_AUDIT_QUEUE = "internal.message_audit"
+        const val MESSAGE_AUDIT_QUEUE = "internal_message_audit"
 
         const val MB_TO_BYTE = 1000000
 

@@ -19,7 +19,7 @@ class MessageAuditLogger(private val messageAuditRepository: MessageAuditReposit
         logsBatchCount++
         auditLogs.add(messageAudit)
 
-        if (logsBatchCount == messageAuditBatchSize) {
+        if (logsBatchCount >= messageAuditBatchSize) {
 
             logBatchToDb()
 
