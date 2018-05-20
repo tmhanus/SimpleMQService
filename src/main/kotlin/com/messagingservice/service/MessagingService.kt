@@ -15,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.web.bind.annotation.*
+import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -51,7 +52,7 @@ interface IMessagingService {
 
     fun purgeTopic(topicName: String)
 
-    fun getStatistics(userName: String?, from: Date?, to: Date?, destinationType: String?) : Statistics
+    fun getStatistics(@RequestBody body: String): Statistics
 }
 
 @RestController
@@ -290,13 +291,34 @@ class MessagingService(private val mqProvider: IMqProvider,
 
     @PreAuthorize("hasAnyRole('admin', 'user')")
     @PostMapping("/stats")
-    override fun getStatistics(@RequestParam("user", required = false) userName: String?,
-                               @RequestParam("from", required = false) @DateTimeFormat(pattern="yyyy-MM-dd hh:mm:ss") from: Date?,
-                               @RequestParam("to", required = false) @DateTimeFormat(pattern="yyyy-MM-dd hh:mm:ss") to: Date?,
-                               @RequestParam("destinationType", required = false) destinationType: String?): Statistics{
+    override fun getStatistics(@RequestBody body: String): Statistics {
+        val jsonObject = Gson().fromJson(body, JsonObject::class.java)
+        val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
-        val requestedFromDate = from ?: getMidnightTime(0)
-        val requestedToDate = to ?: getMidnightTime(1)
+        val userName = getOptionalFieldValue("user", jsonObject)
+        val dateFrom = getOptionalFieldValue("from", jsonObject)
+        val dateTo = getOptionalFieldValue("to", jsonObject)
+        val destinationType = getOptionalFieldValue("destinationType", jsonObject)
+        val destinationName = getOptionalFieldValue("destinationName", jsonObject)
+
+        var dateFromParam: Date? = null
+        var dateToParam: Date? = null
+
+        try {
+            if (dateFrom != null) {
+                dateFromParam = format.parse(dateFrom)
+            }
+
+            if (dateTo != null) {
+                dateToParam = format.parse(dateTo)
+            }
+
+        } catch (e: ParseException) {
+            throw BadRequest("Incorrect date format provided(format yyyy-MM-dd HH:mm:ss is required).")
+        }
+
+        val requestedFromDate = dateFromParam ?: getMidnightTime(0)
+        val requestedToDate = dateToParam ?: getMidnightTime(1)
 
         var messageAudits = messageAuditRepository
                 .findAllByTimestampGreaterThanEqualAndTimestampLessThanEqual(requestedFromDate, requestedToDate)
@@ -308,9 +330,15 @@ class MessagingService(private val mqProvider: IMqProvider,
         }
 
         if (destinationType != null) {
-            messageAudits = messageAudits
-                    .filter { it.destType == MessageDestinationType.valueOf(destinationType)}
-                    .map { MessageAudit(it.id, it.user, it.timestamp, it.destType, it.destName, it.size, it.traffic, it.broker) }
+            messageAudits = if (destinationName != null) {
+                messageAudits
+                        .filter { it.destName == destinationName && it.destType == MessageDestinationType.valueOf(destinationType) }
+                        .map { MessageAudit(it.id, it.user, it.timestamp, it.destType, it.destName, it.size, it.traffic, it.broker) }
+            } else {
+                messageAudits
+                        .filter { it.destType == MessageDestinationType.valueOf(destinationType)}
+                        .map { MessageAudit(it.id, it.user, it.timestamp, it.destType, it.destName, it.size, it.traffic, it.broker) }
+            }
         }
 
         val uploaded = messageAudits
